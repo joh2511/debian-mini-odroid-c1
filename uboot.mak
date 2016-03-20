@@ -1,5 +1,7 @@
 include common.mk
 
+export ARCH := arm
+export CROSS_COMPILE := $(UBOOT_TC_PREFIX)
 export PATH := $(shell pwd)/$(UBOOT_TC_PATH):$(PATH)
 
 UBOOT_BIN := $(UBOOT_SRC)/sd_fuse/uboot.bin
@@ -28,7 +30,7 @@ $(UBOOT_TOOLCHAIN):
 build: $(UBOOT_BIN)
 
 $(UBOOT_BIN): $(UBOOT_TC_DIR) $(UBOOT_SRC)
-	$(MAKE) -C $(UBOOT_SRC) odroidc_config
+	$(MAKE) -C $(UBOOT_SRC) odroidc2_config
 	$(MAKE) -C $(UBOOT_SRC)
 	touch $@
 
