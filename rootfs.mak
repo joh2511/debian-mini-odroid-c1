@@ -23,10 +23,13 @@ delete-rootfs:
 .PHONY: build
 build: $(IMAGE_FILE)
 
+.PHONY: build-base
+build-base: $(ROOTFS_DIR).base
+
 $(ROOTFS_DIR).base:
 	if test -d "$@.tmp"; then rm -rf "$@.tmp" ; fi
 	mkdir -p $@.tmp
-	debootstrap --foreign --no-check-gpg --include=ca-certificates,ssh,vim,locales,ntpdate,usbmount,initramfs-tools --arch=$(DIST_ARCH) $(DIST) $@.tmp $(DIST_URL)
+	debootstrap --foreign --include=ca-certificates,ssh,vim,locales,ntpdate,usbmount,initramfs-tools --arch=$(DIST_ARCH) $(DIST) $@.tmp $(DIST_URL)
 	cp `which qemu-aarch64-static` $@.tmp/usr/bin
 	chroot $@.tmp /bin/bash -c "/debootstrap/debootstrap --second-stage"
 	rm $@.tmp/etc/hostname
@@ -39,22 +42,28 @@ $(ROOTFS_DIR): $(ROOTFS_DIR).base
 	rsync --quiet --archive --devices --specials --hard-links --acls --xattrs --sparse $(ROOTFS_DIR).base/* $@
 	rsync --quiet --archive --devices --specials --hard-links --acls --xattrs --sparse $(MODS_DIR)/* $@
 	LINUX_VERSION="$(shell cat $(LINUX_SRC)/include/config/kernel.release)" && cd $@/lib/modules ; if [ ! -d "$$LINUX_VERSION" ] ; then ln -s "$$LINUX_VERSION*" "$$LINUX_VERSION" ; fi
-	cd files/common ; find . -type f ! -name '*~' -exec cp --preserve=mode,timestamps --parents \{\} ../../$@ \;
-	if [ -d files/$(DIST) ]; then cd files/$(DIST) ; mkdir -p ../../$@/$(DIST); find . -type f ! -name '*~' -exec cp --preserve=mode,timestamps --parents \{\} ../../$@ \; ; fi
-	mount -o bind /proc $@/proc
-	mount -o bind /sys $@/sys
-	mount -o bind /dev $@/dev
-	cp postinstall $@
-	if [ -d "postinst" ]; then cp -r postinst $@ ; fi
-	LINUX_VERSION="$(shell cat $(LINUX_SRC)/include/config/kernel.release)" && chroot $@ /bin/bash -c "/postinstall $(DIST) $(DIST_URL) $$LINUX_VERSION"
-	for i in patches/*.patch ; do patch -p0 -d $@ < $$i ; done
-	if [ -d patches/$(DIST) ]; then for i in patches/$(DIST)/*.patch; do patch -p0 -d $@ < $$i ; done fi
-	umount $@/proc
-	umount $@/sys
-	umount $@/dev
-	rm $@/postinstall
-	rm -rf $@/postinst/
-	rm $@/usr/bin/qemu-arm-static
+	# copy files
+	#cd files/common ; find . -type f ! -name '*~' -exec cp --preserve=mode,timestamps --parents \{\} ../../$@ \;
+	#if [ -d files/$(DIST) ]; then cd files/$(DIST) ; mkdir -p ../../$@/$(DIST); find . -type f ! -name '*~' -exec cp --preserve=mode,timestamps --parents \{\} ../../$@ \; ; fi
+	# run post installation scripts
+	#mount -o bind /proc $@/proc
+	#mount -o bind /sys $@/sys
+	#mount -o bind /dev $@/dev
+	#cp postinstall $@
+	#if [ -d "postinst" ]; then cp -r postinst $@ ; fi
+	#LINUX_VERSION="$(shell cat $(LINUX_SRC)/include/config/kernel.release)" && chroot $@ /bin/bash -c "/postinstall $(DIST) $(DIST_URL) $$LINUX_VERSION"
+	# install patches
+	#for i in patches/*.patch ; do patch -p0 -d $@ < $$i ; done
+	#if [ -d patches/$(DIST) ]; then for i in patches/$(DIST)/*.patch; do patch -p0 -d $@ < $$i ; done fi
+	#umount $@/proc
+	#umount $@/sys
+	#umount $@/dev
+	#rm $@/postinstall
+	#rm -rf $@/postinst/
+	#rm $@/usr/bin/qemu-arm-static
+	LINUX_VERSION="$(shell cat $(LINUX_SRC)/include/config/kernel.release)" && chroot $@ /bin/bash -c "update-initramfs -c -t -k $$LINUX_VERSION"
+	echo "deb $(DIST_URL) $(DIST) main contrib non-free" > $@/etc/apt/sources.list
+	echo "deb-src $(DIST_URL) $(DIST) main contrib non-free" >> $@/etc/apt/sources.list
 	touch $@
 
 $(RAMDISK_FILE): $(ROOTFS_DIR)

@@ -86,9 +86,9 @@ img_size=$(( $cylinders*$bytes_per_cylinder + $bytes ))
 #echo -e "\x55\xaa" | dd bs=1 count=2 seek=510 of=$outfile conv=notrunc
 dd if=/dev/zero of=$outfile bs=1024 count=$(( $img_size/1024 ))
 echo -e "\x55\xaa" | dd bs=1 count=2 seek=510 of=$outfile conv=notrunc
-dd if=$uboot_bin_dir/bl1.bin.hardkernel of=$outfile bs=1 count=442 conv=notrunc
-dd if=$uboot_bin_dir/bl1.bin.hardkernel of=$outfile bs=512 skip=1 seek=1 conv=notrunc
-dd if=$uboot_bin_dir/u-boot.bin of=$outfile bs=512 seek=64 conv=notrunc
+dd if=$uboot_bin_dir/bl1.bin.hardkernel of=$outfile bs=1 count=442 conv=fsync
+dd if=$uboot_bin_dir/bl1.bin.hardkernel of=$outfile bs=512 skip=1 seek=1 conv=fsync
+dd if=$uboot_bin_dir/u-boot.bin of=$outfile bs=512 seek=97 conv=fsync
 sync
 
 # Using --unit M with sfdisk would be too easy... unfortunately it seems like it
